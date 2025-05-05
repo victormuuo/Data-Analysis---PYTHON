@@ -1,0 +1,248 @@
+---
+title: "Data Science Report"
+author: "Rufus Kolawole Asake"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+# Task 1
+# Job Details
+
+**Job Title:** Business Analyst  
+**Company:** Decathlon UK  
+**Location:** London SE16 (Hybrid)  
+  
+    
+    
+**Job Description:**  
+Decathlon UK is seeking a proactive Business Analyst to join our team. The successful candidate will handle ad-hoc and recurring data requests from different business teams, work with technical teams to integrate new data sources for business value, and support various departments in making data-driven decisions. The ideal candidate will have experience in data analysis, strong communication skills, and the ability to work collaboratively in a hybrid work environment.
+
+\newpage
+
+# Cover Letter
+
+```{r echo=FALSE, results='asis'}
+cat("
+Rufus Kolawole Asake  
+37 Caellepa  
+Bangor  
+
+Phone: 03457 125 563    
+
+10-Mar-25    
+
+  
+Hiring Manager   
+Decathlon UK   
+London SE16  
+
+  
+Dear Hiring Manager,  
+
+I am writing to express my interest in the Business Analyst position at Decathlon UK, as advertised on Indeed. With a strong background in data analysis and a passion for leveraging data to drive business solutions, I am confident in my ability to contribute effectively to your team.  
+
+In my previous role at Selected Intervention Twickenham, I was responsible for handling both ad-hoc and recurring data requests from various business units. By employing data visualization tools such as Power BI and Tableau, I translated complex datasets into actionable insights, facilitating informed decision-making across departments. My ability to work closely with technical teams to integrate new data sources aligns with the core responsibilities outlined in the job description.  
+
+I have a proven track record of successful project support, having collaborated with cross-functional teams to implement data-driven solutions that enhance operational efficiency. My experience in supporting the development, testing, and deployment of data integration projects has equipped me with a comprehensive understanding of the data lifecycle, which I am eager to bring to Decathlon UK.  
+
+What excites me about this opportunity is the chance to work in a hybrid environment at Decathlon UK, which I believe fosters a collaborative and flexible setting, essential for innovative problem-solving.  
+
+I am enthusiastic about the prospect of joining Decathlon UK and contributing to the success of your business initiatives. Thank you for considering my application. I look forward to the opportunity to discuss how my skills and experiences align with the needs of your team.  
+  
+    
+      
+Sincerely,  
+Rufus Kolawole Asake  
+")
+```
+
+\newpage
+
+# Task 2: Decision Tree Model
+
+```{r message=FALSE, warning=FALSE}
+# Load the libraries
+library(tidyverse)
+library(rpart)
+library(rpart.plot)
+library(DBI)
+library(RMySQL)
+library(class)
+library(caret)
+```
+
+```{r}
+# Define database connection credentials
+USER <- 'root'
+PASSWORD <- 'Bangor@123'
+HOST <- 'localhost'
+DBNAME <- 'world'
+PORT <- 3306
+
+# Connect to MySQL
+db <- dbConnect(RMySQL::MySQL(),
+                dbname = DBNAME,
+                host = HOST,
+                user = USER,
+                password = PASSWORD,
+                port = PORT)
+
+# Fetch the dataset from MySQL
+df <- dbGetQuery(db, "SELECT * FROM world.customerchurn")
+
+# Close the database connection
+dbDisconnect(db)
+
+# View basic information about the dataset
+str(df)
+summary(df)
+head(df)
+
+# Remove invalid birth years (e.g., before 1900)
+df <- df %>% filter(Year_Birth >= 1900)
+
+# Handle missing values in Income by replacing with the median value
+df$Income[is.na(df$Income)] <- median(df$Income, na.rm = TRUE)
+
+# Convert categorical variables to factors
+df$Education <- as.factor(df$Education)
+df$MaritalStatus <- as.factor(df$MaritalStatus)
+
+# View cleaned dataset summary
+summary(df)
+
+# Split dataset into training (80%) and testing (20%)
+set.seed(123)  # For reproducibility
+train_index <- sample(seq_len(nrow(df)), size = 0.8 * nrow(df))
+train_data <- df[train_index, ]
+test_data <- df[-train_index, ]
+
+# Train the Decision Tree model
+tree_model <- rpart(Response ~ ., data = train_data, method = "class")
+
+# Visualize the Decision Tree
+rpart.plot(tree_model)
+
+# Make predictions on test set
+predictions <- predict(tree_model, test_data, type = "class")
+
+# Confusion Matrix
+conf_matrix <- table(test_data$Response, predictions)
+print(conf_matrix)
+
+# Calculate Accuracy
+accuracy <- sum(diag(conf_matrix)) / sum(conf_matrix)
+print(paste("Model Accuracy:", round(accuracy * 100, 2), "%"))
+
+# Save the trained model for Power BI
+saveRDS(tree_model, "tree_model.rds")
+
+# Make predictions on the entire dataset
+df$Tree_Prediction <- predict(tree_model, df, type = "class")
+
+# Save predictions as CSV for Power BI
+write.csv(df, "decision_tree_predictions.csv", row.names = FALSE)
+```
+
+# Task 3: K-Nearest Neighbors (KNN)
+
+```{r}
+# Normalize numeric variables for KNN
+df_norm <- df %>% 
+  mutate(across(c(Year_Birth, Income, Recency, NumWebPurchases, NumStorePurchases, NumWebVisitsMonth),
+                ~ (.-min(.))/(max(.)-min(.))))
+
+# Remove rows with missing values
+df_norm <- na.omit(df_norm)
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Split dataset into training (80%) and testing (20%)
+train_index <- sample(seq_len(nrow(df_norm)), size = 0.8 * nrow(df_norm))
+train_data <- df_norm[train_index, ]
+test_data <- df_norm[-train_index, ]
+
+# Define predictor and target variables (remove Response from predictors)
+train_x <- train_data %>% select(-Response) %>% select_if(is.numeric)
+test_x <- test_data %>% select(-Response) %>% select_if(is.numeric)
+train_y <- as.factor(train_data$Response)
+test_y <- as.factor(test_data$Response)
+
+# Convert predictor variables to matrices for KNN
+train_x <- as.matrix(na.omit(train_x))
+test_x <- as.matrix(na.omit(test_x))
+
+# Train KNN model
+knn_model <- knn(train = train_x, test = test_x, cl = train_y, k = 5)
+
+# Save predictions in test_data (NOT df)
+test_data$KNN_Prediction <- knn_model
+
+# Generate Decision Tree Predictions
+test_data$Tree_Prediction <- predict(tree_model, test_data, type = "class")
+
+
+# Ensure ID column is present in test_data
+test_data$Response <- as.factor(test_data$Response)
+test_data$Tree_Prediction <- as.factor(test_data$Tree_Prediction)
+test_data$KNN_Prediction <- as.factor(test_data$KNN_Prediction)
+
+# Confusion Matrix
+conf_matrix_knn <- table(test_y, test_data$KNN_Prediction)
+conf_matrix_knn
+
+# Calculate Accuracy
+accuracy_knn <- sum(diag(conf_matrix_knn)) / sum(conf_matrix_knn)
+paste("KNN Model Accuracy:", round(accuracy_knn * 100, 2), "%")
+
+# Save updated test_data with predictions for Power BI
+write.csv(test_data, "knn_predictions.csv", row.names = FALSE)
+
+# Save the trained model
+saveRDS(knn_model, "knn_model.rds")
+```
+
+# Task 4: Clustering
+
+```{r, warning=FALSE}
+# Load clustering libraries
+library(factoextra)
+library(cluster)
+
+# Prepare dataset for clustering
+df_cluster <- df %>% 
+  select(-Education, -MaritalStatus, -Response) %>% 
+  mutate(across(where(is.numeric), ~ (.-min(.))/(max(.)-min(.)))) 
+
+df_cluster <- na.omit(df_cluster)
+
+# Determine the optimal number of clusters using the Elbow Method
+set.seed(123)
+wss <- function(k) {
+  kmeans(df_cluster, k, nstart = 10)$tot.withinss
+}
+k_values <- 1:10
+wss_values <- map_dbl(k_values, wss)
+
+# Plot the Elbow Method graph
+plot(k_values, wss_values, type = "b", pch = 19, frame = FALSE,
+     xlab = "Number of Clusters", ylab = "Total Within-Cluster Sum of Squares")
+
+# Train K-Means clustering model
+optimal_k <- 4  # Adjust this based on the Elbow plot
+set.seed(123)
+kmeans_model <- kmeans(df_cluster, centers = optimal_k, nstart = 10)
+
+df_cluster$Cluster <- as.factor(kmeans_model$cluster)
+
+# Visualize clusters
+fviz_cluster(kmeans_model, data = df_cluster %>% select_if(is.numeric))
+
+# Save clustered dataset
+write.csv(df_cluster, "clustered_customers.csv", row.names = FALSE)
+```
+
+# Summary and Findings
+- Decision Tree achieved an accuracy of `r round(accuracy * 100, 2)`%.
+- KNN model trained with k=5 and achieved an accuracy of `r round(accuracy_knn * 100, 2)`%..
+- Cluster analysis identified `r length(unique(df_cluster$Cluster))` clusters.

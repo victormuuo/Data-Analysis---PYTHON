@@ -1,0 +1,36 @@
+---
+title: "Connect to MySQL"
+author: "Heather He"
+date: "2024-02-22"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Connecting to MySQL on local computer
+
+We will need to install and deploy MySQL on our own computer first. 
+```{r}
+library(DBI)
+library(RMySQL)
+
+USER <- 'root'          # user id, created during database installation
+PASSWORD <- 'BBS20244061'  # password, created during database installation
+HOST <- 'localhost'     # leave as localhost - this means "use the PC you are running R on"
+DBNAME <- 'world'       # the database you'd like to connect, created during database installation
+```
+
+
+```{r}
+# run queries
+db <- dbConnect(MySQL(), user = USER, password = PASSWORD, 
+                host = HOST, dbname = DBNAME, port=3306) # connect to database
+
+result <- dbGetQuery(db, statement = "Select * from world.mktcampaign")
+
+dbDisconnect(db) # disconnect when finished using database
+
+head(result)
+```

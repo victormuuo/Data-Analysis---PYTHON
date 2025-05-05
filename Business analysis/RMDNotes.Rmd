@@ -1,0 +1,68 @@
+---
+title: "4061W4Lab"
+author: "Heather He (courtesy of Prof Bruce Vanstone @Bangor and Dr James Todd @Bond)"
+output: 
+  html_document:
+      theme: spacelab
+      toc: TRUE
+---
+
+# First Level Header
+
+This document is meant to serve as an introduction into R markdown documents and how you can customise them. A lot of the time you will just be writing as normal to produce bodies of text. Generally you will want to break your documents into different sections, with appropriate headers. To create a header, you simply need to place the # symbol before some text. If you want a smaller header, you can place more # symbols. Below, we have a first and second level heading, and you can of course have more levels. Take note of what the headings look like in the rmd document and in the knitted pdf. 
+
+
+## Second Level Header
+
+In addition to headings, you may want to modify the text in your paragraphs in other ways. You may want to italicise or bold certain parts, and you can do this by using asterisks(*) or underscores(_). To italicise a word or phrase, you put an asterisk or underscore on either side of it. E.g., *italicised words*. To bold a word or phrase, you put two asterisks or underscores on either side of it. E.g., **bold words**. As you can probably guess, to both italicise and bold a word or phrase all you need to do is put three asterisks or underscores to either side of it. E.g., ***combining bolding and italicising words***.
+
+Next, if you want to use dot points as you would in word, you simply need to go to a new line and start it with a hyphen (-).  
+- My  
+- Dot   
+- Points  
+It is worth taking note of the fact that rmd documents require that you put two spaces at the end of a line to end it. So if you just hit enter once as you would normally, you may end up without the line break you were expecting. What does this text look like in the pdf versus the rmd?
+- My 
+- Other
+- Dot Points
+
+
+Now we are done looking at the text part of rmd files, let's have a look at the code part. After all, rmd files are useful because they allow you to combine code and text. 
+
+To add a page break, you simply write newpage after a backslash (see the rmd file for this one):
+
+\newpage
+
+## Code Time
+
+If you want to write code in a rmd file, you need to put it in a 'chunk'. To add a chunk, try clicking the green box with a "c" in it, at the top right of this panel of your RStudio session. Alternatively, you can press ctrl+alt+i at the same time. The code you write in the chunk will function as normal, and when you knit your document it will evaluate the code. As an example:
+
+
+```{r}
+print("You can see my print statement and its result!")
+```
+
+A lot of the time it is fine to show the code and your results like this, especially if you are the one using the document. If you are putting together a report, however, you may want to control what gets shown. To do this, we can fiddle with the chunk options (you will need to look at the rmd file rather than html file to see this). If we put "echo=FALSE" in the first line of the chunk, then R knows not to show the chunk when it knits the document, only the output. 
+
+```{r, echo=FALSE}
+print("You can see the result of my print statement, but not the print statement itself!")
+```
+
+You can go the other way as well, and you can tell R not to show your output if you put results = 'hide'. It will be useful to hide the results that are too long, for example, the whole data set. 
+
+```{r, results = 'hide'}
+print("Now you can only see the print statement but not the output!")
+```
+
+While this won't be relevant at this point, be aware that results = 'hide' and eval=FALSE are both options which look the same at first glance but are different in an important way. The former doesn't show the results, while the second doesn't run the code at all. This can cause problems if you have code which relies on it later on in your document. 
+
+```{r, eval = FALSE}
+print("You can see the print statement, but it isn't run with eval=FALSE")
+```
+
+You can also combine many options together. Let's stop both the code and the results from showing (but we still want it to run!).
+
+```{r, echo = FALSE, results = 'hide'}
+print("Now you can't see anything")
+```
+
+There are a huge amount of other options available. You are encouraged to explore resources like R Markdown cheatsheet on your own. 
